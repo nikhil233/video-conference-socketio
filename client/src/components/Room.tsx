@@ -89,6 +89,10 @@ export const Room: React.FC = () => {
         }
       });
 
+      client.on('local-stream-updated', (stream) => {
+        dispatch(setLocalStream(stream));
+      });
+
       try {
         await client.join({ roomId, peerId, displayName });
       } catch (error) {

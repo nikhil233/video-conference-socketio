@@ -13,6 +13,13 @@ export const Me: React.FC = () => {
     }
   }, [localStream]);
 
+  // Update video stream when video is toggled on
+  useEffect(() => {
+    if (videoRef.current && localStream && isVideoEnabled) {
+      videoRef.current.srcObject = localStream;
+    }
+  }, [isVideoEnabled, localStream]);
+
   return (
     <div className="huddle-peer-card group">
       <div className="relative w-full h-full bg-slate-700">

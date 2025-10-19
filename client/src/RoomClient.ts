@@ -23,6 +23,7 @@ export interface RoomClientEvents {
   'producer-closed': (producerId: string) => void;
   'transport-closed': (transportId: string) => void;
   'production-started': () => void;
+  'local-stream-updated': (stream: MediaStream | null) => void;
 }
 const PC_PROPRIETARY_CONSTRAINTS =
 {
@@ -810,10 +811,105 @@ export class RoomClient {
   }
 
   async toggleVideo(): Promise<void> {
-    if (this.localVideoTrack) {
-      const newState = !this.localVideoTrack.enabled;
-      this.localVideoTrack.enabled = newState;
-      console.log(`🎥 Video ${newState ? 'enabled' : 'disabled'}`);
+    // Check if video is currently enabled by looking at the track state
+    const isCurrentlyEnabled = this.localVideoTrack && this.localVideoTrack.enabled;
+    
+    if (!this.localVideoTrack && !isCurrentlyEnabled) {
+      console.log('🎥 Video track does not exist - will create new one');
+    }
+    
+    if (isCurrentlyEnabled) {
+      // Turning off video - stop the track and close the producer
+      console.log('🎥 Turning off video - stopping track and closing producer');
+      
+      // Find and close the video producer
+      const videoProducer = Array.from(this.producers.values()).find(
+        producer => producer.kind === 'video' && producer.appData?.source === 'webcam'
+      );
+      
+      if (videoProducer) {
+        console.log('🎥 Closing video producer:', videoProducer.id);
+        videoProducer.close();
+        this.producers.delete(videoProducer.id);
+      }
+      
+      // Stop the video track
+      if (this.localVideoTrack) {
+        this.localVideoTrack.stop();
+        this.localVideoTrack = undefined;
+      }
+      
+      // Remove video track from local stream
+      if (this.localStream) {
+        const videoTracks = this.localStream.getVideoTracks();
+        videoTracks.forEach(track => track.stop());
+        this.localStream.removeTrack(videoTracks[0]);
+      }
+      
+      // Emit the updated local stream (now without video)
+      this.emit('local-stream-updated', this.localStream);
+      
+      console.log('🎥 Video track stopped and producer closed');
+    } else {
+      // Turning on video - create new video track and producer
+      console.log('🎥 Turning on video - creating new track and producer');
+      
+      try {
+        // Get new video track
+        const videoStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            frameRate: { ideal: 30 }
+          }
+        });
+        
+        const newVideoTrack = videoStream.getVideoTracks()[0];
+        this.localVideoTrack = newVideoTrack;
+        
+        // Add video track to local stream
+        if (this.localStream) {
+          this.localStream.addTrack(newVideoTrack);
+        } else {
+          // If no local stream exists, create one with audio + video
+          const audioStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
+          });
+          this.localStream = new MediaStream([...audioStream.getAudioTracks(), newVideoTrack]);
+        }
+        
+        // Emit the updated local stream
+        this.emit('local-stream-updated', this.localStream);
+        
+        // Create new video producer
+        if (this.sendTransport && this.mediasoupDevice?.canProduce('video')) {
+          const videoProducer = await this.sendTransport.produce({
+            track: newVideoTrack,
+            appData: { source: 'webcam' },
+          });
+          
+          // Add producer event listeners
+          videoProducer.on('transportclose', () => {
+            console.log('🎥 Video producer transport closed');
+          });
+          
+          videoProducer.on('@close', () => {
+            console.log('🎥 Video producer closed');
+          });
+          
+          this.producers.set(videoProducer.id, videoProducer);
+          console.log('🎥 New video producer created:', videoProducer.id);
+        }
+        
+        console.log('🎥 Video track created and producer started');
+      } catch (error) {
+        console.error('🎥 Failed to turn on video:', error);
+        throw error;
+      }
     }
   }
 
