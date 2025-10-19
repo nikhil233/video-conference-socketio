@@ -1,11 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../redux/store';
+import { cn } from '../lib/utils';
 
 export const Me: React.FC = () => {
-  const { localStream, displayName, isProducing } = useSelector((state: RootState) => state.room);
+  const { localStream, displayName, isProducing, isVideoEnabled, isAudioEnabled } = useSelector((state: RootState) => state.room);
   const videoRef = useRef<HTMLVideoElement>(null);
-
 
   useEffect(() => {
     if (videoRef.current && localStream) {
@@ -13,67 +13,53 @@ export const Me: React.FC = () => {
     }
   }, [localStream]);
 
-  const handleToggleVideo = () => {
-    if (localStream) {
-      const videoTrack = localStream.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-      }
-    }
-  };
-
-  const handleToggleAudio = () => {
-    if (localStream) {
-      const audioTrack = localStream.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-      }
-    }
-  };
-
-  const handleToggleScreenShare = () => {
-    // This would be implemented in the RoomClient
-    console.log('Toggle screen share');
-  };
-
   return (
-    <div className="me-container">
-      <div className="video-wrapper">
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          className="local-video"
-        />
-        <div className="video-overlay">
-          <span className="peer-name">{displayName} (You)</span>
-          {!isProducing && <span className="status-indicator">Connecting...</span>}
+    <div className="huddle-peer-card group">
+      <div className="relative w-full h-full bg-slate-700">
+        {isVideoEnabled ? (
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-slate-600">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-slate-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                <span className="text-2xl font-bold text-white">
+                  {displayName ? displayName.charAt(0).toUpperCase() : 'You'}
+                </span>
+              </div>
+              <p className="text-slate-300 text-sm">Camera off</p>
+            </div>
+          </div>
+        )}
+        
+        {/* Status indicators */}
+        <div className="absolute top-3 left-3 flex gap-2">
+          {!isVideoEnabled && (
+            <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-medium">
+              Camera Off
+            </div>
+          )}
+          {!isAudioEnabled && (
+            <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-medium">
+              Mic Off
+            </div>
+          )}
+          {!isProducing && (
+            <div className="bg-yellow-600 text-white px-2 py-1 rounded text-xs font-medium">
+              Connecting...
+            </div>
+          )}
         </div>
-      </div>
-      
-      <div className="controls">
-        <button
-          onClick={handleToggleVideo}
-          className="control-button video-button"
-          title="Toggle Video"
-        >
-          📹
-        </button>
-        <button
-          onClick={handleToggleAudio}
-          className="control-button audio-button"
-          title="Toggle Audio"
-        >
-          🎤
-        </button>
-        <button
-          onClick={handleToggleScreenShare}
-          className="control-button screen-button"
-          title="Share Screen"
-        >
-          🖥️
-        </button>
+        
+        {/* Name overlay */}
+        <div className="huddle-peer-name">
+          {displayName} (You)
+        </div>
       </div>
     </div>
   );

@@ -13,6 +13,10 @@ export interface RoomState {
   speakingPeers: Array<{ peerId: string; volume: number }>;
   localStream: MediaStream | null;
   consumers: Record<string, { consumerId: string; peerId: string; kind: string; track: MediaStreamTrack }>;
+  // Video/Audio state
+  isVideoEnabled: boolean;
+  isAudioEnabled: boolean;
+  isScreenSharing: boolean;
   stats: {
     totalPeers: number;
     totalProducers: number;
@@ -32,6 +36,10 @@ const initialState: RoomState = {
   speakingPeers: [],
   localStream: null,
   consumers: {},
+  // Video/Audio state
+  isVideoEnabled: true,
+  isAudioEnabled: true,
+  isScreenSharing: false,
   stats: {
     totalPeers: 0,
     totalProducers: 0,
@@ -90,6 +98,15 @@ const roomSlice = createSlice({
       delete state.consumers[action.payload];
       state.stats.totalConsumers = Object.keys(state.consumers).length;
     },
+    setVideoEnabled: (state, action: PayloadAction<boolean>) => {
+      state.isVideoEnabled = action.payload;
+    },
+    setAudioEnabled: (state, action: PayloadAction<boolean>) => {
+      state.isAudioEnabled = action.payload;
+    },
+    setScreenSharing: (state, action: PayloadAction<boolean>) => {
+      state.isScreenSharing = action.payload;
+    },
     resetRoom: (state) => {
       return { ...initialState };
     },
@@ -111,6 +128,9 @@ export const {
   updateStats,
   addConsumer,
   removeConsumer,
+  setVideoEnabled,
+  setAudioEnabled,
+  setScreenSharing,
   resetRoom,
 } = roomSlice.actions;
 

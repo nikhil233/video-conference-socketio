@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../redux/store';
 import { PeerInfo } from '../RoomClient';
+import { cn } from '../lib/utils';
 
 interface PeerProps {
   peer: PeerInfo;
@@ -113,39 +114,53 @@ export const Peer: React.FC<PeerProps> = ({ peer }) => {
   const isActiveSpeaker = activeSpeaker === peer.id;
 
   return (
-    <div className={`peer-container ${isActiveSpeaker ? 'active-speaker' : ''} ${isSpeaking ? 'speaking' : ''}`}>
-      <div className="video-wrapper">
+    <div className={cn(
+      "huddle-peer-card group",
+      isActiveSpeaker && "active-speaker",
+      isSpeaking && "speaking"
+    )}>
+      <div className="relative w-full h-full bg-slate-700">
         <video
           ref={videoRef}
           autoPlay
           playsInline
-          className="peer-video"
+          className="w-full h-full object-cover"
         />
         <audio 
           ref={audioRef} 
           autoPlay 
           playsInline 
-          className="peer-audio"
-          style={{ display: 'none' }}
+          className="hidden"
         />
-        <div className="video-overlay">
-          <span className="peer-name">{peer.displayName}</span>
-          {isSpeaking && (
-            <div className="speaking-indicator">
-              <div 
-                className="volume-bar"
-                style={{ height: `${Math.max(speakingVolume * 100, 10)}%` }}
-              />
-            </div>
-          )}
+        
+        {/* Status indicator */}
+        <div className={cn(
+          "huddle-status-indicator",
+          peer.joined ? "connected" : "connecting"
+        )} />
+        
+        {/* Peer name overlay */}
+        <div className="huddle-peer-name">
+          {peer.displayName}
         </div>
-      </div>
-      
-      <div className="peer-info">
-        <span className="peer-id">ID: {peer.id}</span>
-        <span className="peer-status">
-          {peer.joined ? 'Connected' : 'Connecting...'}
-        </span>
+        
+        {/* Speaking indicator */}
+        {isSpeaking && (
+          <div className="absolute bottom-3 right-3">
+            <div className="speaking-visualizer">
+              {Array.from({ length: 4 }, (_, i) => (
+                <div
+                  key={i}
+                  className="speaking-bar"
+                  style={{
+                    height: `${Math.max(speakingVolume * 100 * (0.5 + Math.random() * 0.5), 20)}%`,
+                    animationDelay: `${i * 0.1}s`
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

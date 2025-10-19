@@ -811,13 +811,17 @@ export class RoomClient {
 
   async toggleVideo(): Promise<void> {
     if (this.localVideoTrack) {
-      this.localVideoTrack.enabled = !this.localVideoTrack.enabled;
+      const newState = !this.localVideoTrack.enabled;
+      this.localVideoTrack.enabled = newState;
+      console.log(`🎥 Video ${newState ? 'enabled' : 'disabled'}`);
     }
   }
 
   async toggleAudio(): Promise<void> {
     if (this.localAudioTrack) {
-      this.localAudioTrack.enabled = !this.localAudioTrack.enabled;
+      const newState = !this.localAudioTrack.enabled;
+      this.localAudioTrack.enabled = newState;
+      console.log(`🔊 Audio ${newState ? 'enabled' : 'disabled'}`);
     }
   }
 

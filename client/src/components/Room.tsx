@@ -5,6 +5,7 @@ import { RoomClient } from '../RoomClient';
 import { Peer } from './Peer';
 import { Me } from './Me';
 import { Stats } from './Stats';
+import { ControlPanel } from './ControlPanel';
 import { getRandomRoomId, getRandomPeerId, getRandomDisplayName } from '../utils';
 import { setRoomId, setPeerId, setDisplayName, setConnected, setProducing, addPeer, removePeer, setActiveSpeaker, setSpeakingPeers, setLocalStream, addConsumer, removeConsumer, resetRoom } from '../redux/slices/roomSlice';
 
@@ -185,55 +186,65 @@ export const Room: React.FC = () => {
 
   if (!isConnected) {
     return (
-      <div className="room-container">
-        <div className="join-room">
-          <h1>Video Conference</h1>
-          <p>Join a room to start video conferencing</p>
+      <div className="join-container">
+        <div className="join-card">
+          <h1 className="join-title">Video Conference</h1>
+          <p className="join-subtitle">Join a room to start video conferencing</p>
           
           {!showJoinForm ? (
-            <div className="join-options">
-              <button onClick={handleCreateRoom} className="join-button create">
+            <div className="flex flex-col gap-4">
+              <button onClick={handleCreateRoom} className="join-button">
                 Create New Room
               </button>
-              <button onClick={handleJoinExistingRoom} className="join-button join">
+              <button onClick={handleJoinExistingRoom} className="join-button secondary">
                 Join Existing Room
               </button>
             </div>
           ) : (
             <div className="join-form">
-              <h3>{joinMode === 'create' ? 'Create New Room' : 'Join Existing Room'}</h3>
+              <h3 className="text-xl font-semibold text-white text-center mb-6">
+                {joinMode === 'create' ? 'Create New Room' : 'Join Existing Room'}
+              </h3>
               
-              <div className="form-group">
-                <label htmlFor="displayName">Display Name:</label>
-                <input
-                  type="text"
-                  id="displayName"
-                  value={inputDisplayName}
-                  onChange={(e) => setInputDisplayName(e.target.value)}
-                  placeholder="Enter your display name"
-                  maxLength={50}
-                />
-              </div>
-
-              {joinMode === 'join' && (
-                <div className="form-group">
-                  <label htmlFor="roomId">Room ID:</label>
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="displayName" className="block text-sm font-medium text-slate-300 mb-2">
+                    Display Name
+                  </label>
                   <input
                     type="text"
-                    id="roomId"
-                    value={inputRoomId}
-                    onChange={(e) => setInputRoomId(e.target.value)}
-                    placeholder="Enter room ID"
-                    maxLength={64}
+                    id="displayName"
+                    value={inputDisplayName}
+                    onChange={(e) => setInputDisplayName(e.target.value)}
+                    placeholder="Enter your display name"
+                    maxLength={50}
+                    className="join-input"
                   />
                 </div>
-              )}
 
-              <div className="form-actions">
-                <button onClick={handleSubmitJoin} className="submit-button">
+                {joinMode === 'join' && (
+                  <div>
+                    <label htmlFor="roomId" className="block text-sm font-medium text-slate-300 mb-2">
+                      Room ID
+                    </label>
+                    <input
+                      type="text"
+                      id="roomId"
+                      value={inputRoomId}
+                      onChange={(e) => setInputRoomId(e.target.value)}
+                      placeholder="Enter room ID"
+                      maxLength={64}
+                      className="join-input"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button onClick={handleSubmitJoin} className="join-button">
                   {joinMode === 'create' ? 'Create & Join' : 'Join Room'}
                 </button>
-                <button onClick={handleCancelJoin} className="cancel-button">
+                <button onClick={handleCancelJoin} className="join-button secondary">
                   Cancel
                 </button>
               </div>
@@ -244,53 +255,62 @@ export const Room: React.FC = () => {
     );
   }
 
+  const handleToggleVideo = async () => {
+    if (roomClient) {
+      await roomClient.toggleVideo();
+    }
+  };
+
+  const handleToggleAudio = async () => {
+    if (roomClient) {
+      await roomClient.toggleAudio();
+    }
+  };
+
+  const handleToggleScreenShare = async () => {
+    if (roomClient) {
+      await roomClient.toggleScreenShare();
+    }
+  };
+
   return (
-    <div className="room-container" ref={roomRef}>
+    <div className="huddle-container" ref={roomRef}>
+      {/* Room Header */}
       <div className="room-header">
-        <div className="room-info">
-          <h2>Room: {roomId}</h2>
-          <div className="room-id-display">
-            <span className="room-id-label">Room ID:</span>
-            <span className="room-id-value" onClick={() => navigator.clipboard.writeText(roomId || '')} title="Click to copy">
-              {roomId}
-            </span>
-          </div>
-          <div className="share-url-display">
-            <span className="share-url-label">Share URL:</span>
-            <div className="share-url-container">
-              <input 
-                type="text" 
-                value={generateShareUrl()} 
-                readOnly 
-                className="share-url-input"
-                title="Share this URL with others to join the room"
-              />
-              <button onClick={copyShareUrl} className="copy-button" title="Copy share URL">
-                📋
-              </button>
-            </div>
+        <div className="flex items-center gap-4">
+          <h2 className="room-title">Room: {roomId}</h2>
+          <div className="room-id" onClick={() => navigator.clipboard.writeText(roomId || '')} title="Click to copy">
+            {roomId}
           </div>
         </div>
-        <div className="room-controls">
-          <button onClick={handleToggleStats} className="stats-button">
+        <div className="flex items-center gap-2">
+          <button onClick={handleToggleStats} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm transition-colors">
             {showStats ? 'Hide Stats' : 'Show Stats'}
           </button>
-          <button onClick={handleLeaveRoom} className="leave-button">
+          <button onClick={handleLeaveRoom} className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm transition-colors">
             Leave Room
           </button>
         </div>
       </div>
 
-      <div className="room-content">
-        <div className="video-grid">
-          <Me />
-          {Object.values(peers).map((peer) => (
-            <Peer key={peer.id} peer={peer} />
-          ))}
-        </div>
-
-        {showStats && <Stats />}
+      {/* Video Grid */}
+      <div className="huddle-grid">
+        <Me />
+        {Object.values(peers).map((peer) => (
+          <Peer key={peer.id} peer={peer} />
+        ))}
       </div>
+
+      {/* Control Panel */}
+      <ControlPanel
+        onLeave={handleLeaveRoom}
+        onToggleVideo={handleToggleVideo}
+        onToggleAudio={handleToggleAudio}
+        onToggleScreenShare={handleToggleScreenShare}
+      />
+
+      {/* Stats Overlay */}
+      {showStats && <Stats />}
     </div>
   );
 };
