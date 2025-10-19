@@ -679,7 +679,8 @@ export class RoomClient {
       const mediaConstraints: MediaStreamConstraints = {
         audio: {
           echoCancellation: true,
-          noiseSuppression: true
+          noiseSuppression: true,
+          autoGainControl: true
         }
       };
       
@@ -742,8 +743,8 @@ export class RoomClient {
 
       // Produce audio
       if (this.localAudioTrack) {
-        console.log('Producing audio...');
-        console.log('Audio track details:', {
+        console.log('🔊 Producing audio...');
+        console.log('🔊 Audio track details:', {
           id: this.localAudioTrack.id,
           kind: this.localAudioTrack.kind,
           enabled: this.localAudioTrack.enabled,
@@ -751,28 +752,36 @@ export class RoomClient {
           muted: this.localAudioTrack.muted
         });
         
-        const audioProducer = await this.sendTransport.produce({
-          track: this.localAudioTrack,
-          appData: { source: 'mic' },
-        });
-        console.log('Audio producer created:', audioProducer.id);
-        console.log('Audio producer details:', {
-          id: audioProducer.id,
-          kind: audioProducer.kind,
-          closed: audioProducer.closed,
-          paused: audioProducer.paused
-        });
-        
-        // Add producer event listeners
-        audioProducer.on('transportclose', () => {
-          console.log('Audio producer transport closed');
-        });
-        
-        audioProducer.on('@close', () => {
-          console.log('Audio producer closed');
-        });
-        
-        this.producers.set(audioProducer.id, audioProducer);
+        try {
+          const audioProducer = await this.sendTransport.produce({
+            track: this.localAudioTrack,
+            appData: { source: 'mic' },
+          });
+          console.log('🔊 Audio producer created successfully:', audioProducer.id);
+          console.log('🔊 Audio producer details:', {
+            id: audioProducer.id,
+            kind: audioProducer.kind,
+            closed: audioProducer.closed,
+            paused: audioProducer.paused
+          });
+          
+          // Add producer event listeners
+          audioProducer.on('transportclose', () => {
+            console.log('🔊 Audio producer transport closed');
+          });
+          
+          audioProducer.on('@close', () => {
+            console.log('🔊 Audio producer closed');
+          });
+          
+          this.producers.set(audioProducer.id, audioProducer);
+          console.log('🔊 Audio producer added to producers map');
+        } catch (error) {
+          console.error('🔊 Failed to create audio producer:', error);
+          throw error;
+        }
+      } else {
+        console.warn('🔊 No audio track available for production');
       }
 
       this.isProducing = true;
