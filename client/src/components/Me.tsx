@@ -25,14 +25,14 @@ export const Me: React.FC = () => {
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-slate-600">
+          <div className="w-full h-full flex items-center justify-center bg-gray-600">
             <div className="text-center">
-              <div className="w-16 h-16 bg-slate-500 rounded-full flex items-center justify-center mx-auto mb-2">
+              <div className="w-16 h-16 bg-gray-500 rounded-full flex items-center justify-center mx-auto mb-2">
                 <span className="text-2xl font-bold text-white">
                   {displayName ? displayName.charAt(0).toUpperCase() : 'You'}
                 </span>
               </div>
-              <p className="text-slate-300 text-sm">Camera off</p>
+              <p className="text-gray-300 text-sm">Camera off</p>
             </div>
           </div>
         )}

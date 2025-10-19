@@ -4,6 +4,18 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  safelist: [
+    "border-border",
+    "bg-background",
+    "text-foreground",
+    "bg-card",
+    "text-card-foreground",
+    "bg-popover",
+    "text-popover-foreground",
+    "bg-primary",
+    "text-primary-foreground",
+  ],
+
   theme: {
     extend: {
       colors: {

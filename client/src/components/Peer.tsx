@@ -119,7 +119,7 @@ export const Peer: React.FC<PeerProps> = ({ peer }) => {
       isActiveSpeaker && "active-speaker",
       isSpeaking && "speaking"
     )}>
-      <div className="relative w-full h-full bg-slate-700">
+      <div className="relative w-full h-full bg-gray-700">
         <video
           ref={videoRef}
           autoPlay

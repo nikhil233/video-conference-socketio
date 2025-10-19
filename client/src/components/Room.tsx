@@ -208,7 +208,7 @@ export const Room: React.FC = () => {
               
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="displayName" className="block text-sm font-medium text-slate-300 mb-2">
+                  <label htmlFor="displayName" className="block text-sm font-medium text-gray-300 mb-2">
                     Display Name
                   </label>
                   <input
@@ -224,7 +224,7 @@ export const Room: React.FC = () => {
 
                 {joinMode === 'join' && (
                   <div>
-                    <label htmlFor="roomId" className="block text-sm font-medium text-slate-300 mb-2">
+                    <label htmlFor="roomId" className="block text-sm font-medium text-gray-300 mb-2">
                       Room ID
                     </label>
                     <input
@@ -284,7 +284,7 @@ export const Room: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={handleToggleStats} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm transition-colors">
+          <button onClick={handleToggleStats} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm transition-colors">
             {showStats ? 'Hide Stats' : 'Show Stats'}
           </button>
           <button onClick={handleLeaveRoom} className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm transition-colors">
