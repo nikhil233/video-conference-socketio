@@ -1,0 +1,32 @@
+{
+  "name": "video-conference-socketio",
+  "version": "1.0.0",
+  "description": "Socket.io Video Conferencing Application with mediasoup",
+  "scripts": {
+    "start": "./start.sh",
+    "dev": "concurrently \"cd server && npm run dev\" \"cd client && npm run dev\"",
+    "build": "cd server && npm run build && cd ../client && npm run build",
+    "install-all": "cd server && npm install && cd ../client && npm install",
+    "clean": "rm -rf server/dist server/node_modules client/dist client/node_modules",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "video-conference",
+    "socket.io",
+    "mediasoup",
+    "webrtc",
+    "react",
+    "typescript"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}

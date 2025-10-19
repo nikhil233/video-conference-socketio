@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Conference Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-success { background-color: #28a745; color: white; }
+        .btn-danger { background-color: #dc3545; color: white; }
+        video {
+            width: 300px;
+            height: 200px;
+            border: 1px solid #ccc;
+            margin: 10px;
+        }
+        #log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Video Conference Test</h1>
+    
+    <div class="test-section">
+        <h3>Browser Compatibility</h3>
+        <div id="browser-tests"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Media Devices Test</h3>
+        <button class="btn-primary" onclick="testMediaDevices()">Test Media Devices</button>
+        <div id="media-devices-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Camera/Microphone Test</h3>
+        <button class="btn-primary" onclick="testUserMedia()">Test Camera & Microphone</button>
+        <button class="btn-danger" onclick="stopMedia()">Stop Media</button>
+        <div id="user-media-result"></div>
+        <video id="test-video" autoplay muted playsinline></video>
+    </div>
+    
+    <div class="test-section">
+        <h3>Server Connection Test</h3>
+        <button class="btn-primary" onclick="testServerConnection()">Test Server Connection</button>
+        <div id="server-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Log</h3>
+        <div id="log"></div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? 'red' : type === 'success' ? 'green' : type === 'warning' ? 'orange' : 'black';
+            logDiv.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function setResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        // Browser compatibility tests
+        function runBrowserTests() {
+            const tests = document.getElementById('browser-tests');
+            let results = [];
+
+            // Check getUserMedia support
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                results.push('<div class="success">✓ getUserMedia supported</div>');
+                log('getUserMedia is supported', 'success');
+            } else {
+                results.push('<div class="error">✗ getUserMedia not supported</div>');
+                log('getUserMedia is not supported', 'error');
+            }
+
+            // Check WebRTC support
+            if (window.RTCPeerConnection) {
+                results.push('<div class="success">✓ WebRTC supported</div>');
+                log('WebRTC is supported', 'success');
+            } else {
+                results.push('<div class="error">✗ WebRTC not supported</div>');
+                log('WebRTC is not supported', 'error');
+            }
+
+            // Check WebSocket support
+            if (window.WebSocket) {
+                results.push('<div class="success">✓ WebSocket supported</div>');
+                log('WebSocket is supported', 'success');
+            } else {
+                results.push('<div class="error">✗ WebSocket not supported</div>');
+                log('WebSocket is not supported', 'error');
+            }
+
+            tests.innerHTML = results.join('');
+        }
+
+        // Test media devices
+        async function testMediaDevices() {
+            log('Testing media devices...');
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                const audioDevices = devices.filter(device => device.kind === 'audioinput');
+                
+                let result = `<div class="success">
+                    <strong>Media Devices Found:</strong><br>
+                    Video devices: ${videoDevices.length}<br>
+                    Audio devices: ${audioDevices.length}<br>
+                    Total devices: ${devices.length}
+                </div>`;
+                
+                if (videoDevices.length === 0) {
+                    result += '<div class="warning">⚠ No video devices found</div>';
+                }
+                if (audioDevices.length === 0) {
+                    result += '<div class="warning">⚠ No audio devices found</div>';
+                }
+                
+                setResult('media-devices-result', result, 'success');
+                log(`Found ${videoDevices.length} video and ${audioDevices.length} audio devices`, 'success');
+            } catch (error) {
+                setResult('media-devices-result', `<div class="error">Error: ${error.message}</div>`, 'error');
+                log(`Media devices error: ${error.message}`, 'error');
+            }
+        }
+
+        // Test user media
+        let currentStream = null;
+        async function testUserMedia() {
+            log('Testing camera and microphone access...');
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        frameRate: { ideal: 30 }
+                    },
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    }
+                });
+                
+                currentStream = stream;
+                const video = document.getElementById('test-video');
+                video.srcObject = stream;
+                
+                const videoTracks = stream.getVideoTracks();
+                const audioTracks = stream.getAudioTracks();
+                
+                let result = `<div class="success">
+                    <strong>Media Access Successful:</strong><br>
+                    Video tracks: ${videoTracks.length}<br>
+                    Audio tracks: ${audioTracks.length}<br>
+                    Stream active: ${stream.active}
+                </div>`;
+                
+                if (videoTracks.length > 0) {
+                    const videoTrack = videoTracks[0];
+                    result += `<div class="success">
+                        Video: ${videoTrack.label}<br>
+                        Enabled: ${videoTrack.enabled}<br>
+                        Ready state: ${videoTrack.readyState}
+                    </div>`;
+                }
+                
+                if (audioTracks.length > 0) {
+                    const audioTrack = audioTracks[0];
+                    result += `<div class="success">
+                        Audio: ${audioTrack.label}<br>
+                        Enabled: ${audioTrack.enabled}<br>
+                        Ready state: ${audioTrack.readyState}
+                    </div>`;
+                }
+                
+                setResult('user-media-result', result, 'success');
+                log('Camera and microphone access successful', 'success');
+            } catch (error) {
+                let errorMsg = `Error: ${error.message}`;
+                if (error.name === 'NotAllowedError') {
+                    errorMsg = 'Camera and microphone access denied. Please allow access and try again.';
+                } else if (error.name === 'NotFoundError') {
+                    errorMsg = 'No camera or microphone found.';
+                } else if (error.name === 'NotReadableError') {
+                    errorMsg = 'Camera or microphone is already in use.';
+                }
+                
+                setResult('user-media-result', `<div class="error">${errorMsg}</div>`, 'error');
+                log(`Media access error: ${error.message}`, 'error');
+            }
+        }
+
+        function stopMedia() {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                currentStream = null;
+                const video = document.getElementById('test-video');
+                video.srcObject = null;
+                setResult('user-media-result', '<div class="warning">Media stopped</div>', 'warning');
+                log('Media stopped', 'warning');
+            }
+        }
+
+        // Test server connection
+        async function testServerConnection() {
+            log('Testing server connection...');
+            try {
+                const response = await fetch('http://localhost:3000/health');
+                if (response.ok) {
+                    const data = await response.json();
+                    setResult('server-result', `<div class="success">
+                        <strong>Server Connection Successful:</strong><br>
+                        Status: ${data.status}<br>
+                        Workers: ${data.workers.length}<br>
+                        Rooms: ${data.rooms.length}
+                    </div>`, 'success');
+                    log('Server connection successful', 'success');
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                setResult('server-result', `<div class="error">Server connection failed: ${error.message}</div>`, 'error');
+                log(`Server connection error: ${error.message}`, 'error');
+            }
+        }
+
+        // Run browser tests on page load
+        window.onload = function() {
+            runBrowserTests();
+            log('Test page loaded', 'info');
+        };
+    </script>
+</body>
+</html>
