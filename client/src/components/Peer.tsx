@@ -32,10 +32,10 @@ export const Peer: React.FC<PeerProps> = ({ peer }) => {
     console.log(`🎥 Peer ${peer.id} - all consumers:`, consumers);
 
     // Find video and audio consumers for this peer
-    const videoConsumer = Object.values(consumers).find(
+    const videoConsumer = Object.values(consumers).reverse().find(
       consumer => consumer.peerId === peer.id && consumer.kind === 'video'
     );
-    const audioConsumer = Object.values(consumers).find(
+    const audioConsumer = Object.values(consumers).reverse().find(
       consumer => consumer.peerId === peer.id && consumer.kind === 'audio'
     );
 

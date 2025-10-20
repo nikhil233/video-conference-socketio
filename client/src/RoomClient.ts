@@ -307,6 +307,7 @@ export class RoomClient {
         this.handleConsumerClosed(data.consumerId);
         break;
       case 'producerClosed':
+        console.log('🎥 Received producer closed notification from server:', data);
         this.handleProducerClosed(data.producerId);
         break;
       case 'transportClosed':
@@ -364,6 +365,8 @@ export class RoomClient {
 
   private handleProducerClosed(producerId: string): void {
     console.log('🎥 Producer closed, closing corresponding consumers:', producerId);
+    console.log('🎥 Current producers map:', Array.from(this.producers.keys()));
+    console.log('🎥 Current consumers metadata:', Array.from(this.consumersMetadata.entries()));
     
     // Find consumers that were consuming from this producer
     const consumersToClose: string[] = [];
@@ -862,23 +865,28 @@ export class RoomClient {
         producer => producer.kind === 'video' && producer.appData?.source === 'webcam'
       );
       
-      if (videoProducer) {
-        console.log('🎥 Closing video producer:', videoProducer.id);
-        videoProducer.close();
-        this.producers.delete(videoProducer.id);
+
+      if(videoProducer){
+        this.request('closeProducer', { producerId: videoProducer?.id });
+        this.producers.delete(videoProducer?.id || '');
       }
-      
-      // Stop the video track
+
+      // Stop the video track and remove from local stream
       if (this.localVideoTrack) {
+        const trackId = this.localVideoTrack.id;
         this.localVideoTrack.stop();
+        
+        // Remove video track from local stream
+        if (this.localStream) {
+          const videoTracks = this.localStream.getVideoTracks();
+          // Find and remove the specific video track we just stopped
+          const trackToRemove = videoTracks.find(track => track.id === trackId);
+          if (trackToRemove) {
+            this.localStream.removeTrack(trackToRemove);
+          }
+        }
+        
         this.localVideoTrack = undefined;
-      }
-      
-      // Remove video track from local stream
-      if (this.localStream) {
-        const videoTracks = this.localStream.getVideoTracks();
-        videoTracks.forEach(track => track.stop());
-        this.localStream.removeTrack(videoTracks[0]);
       }
       
       // Emit the updated local stream (now without video)
@@ -949,10 +957,109 @@ export class RoomClient {
   }
 
   async toggleAudio(): Promise<void> {
-    if (this.localAudioTrack) {
-      const newState = !this.localAudioTrack.enabled;
-      this.localAudioTrack.enabled = newState;
-      console.log(`🔊 Audio ${newState ? 'enabled' : 'disabled'}`);
+    // Check if audio is currently enabled by looking at the track state
+    const isCurrentlyEnabled = this.localAudioTrack && this.localAudioTrack.enabled;
+    
+    if (!this.localAudioTrack && !isCurrentlyEnabled) {
+      console.log('🔊 Audio track does not exist - will create new one');
+    }
+    
+    if (isCurrentlyEnabled) {
+      // Turning off audio - stop the track and close the producer
+      console.log('🔊 Turning off audio - stopping track and closing producer');
+      
+      // Find and close the audio producer
+      const audioProducer = Array.from(this.producers.values()).find(
+        producer => producer.kind === 'audio' && producer.appData?.source === 'mic'
+      );
+      
+      if(audioProducer){
+        this.request('closeProducer', { producerId: audioProducer?.id });
+        this.producers.delete(audioProducer?.id || '');
+      }
+
+      // Stop the audio track and remove from local stream
+      if (this.localAudioTrack) {
+        const trackId = this.localAudioTrack.id;
+        this.localAudioTrack.stop();
+        
+        // Remove audio track from local stream
+        if (this.localStream) {
+          const audioTracks = this.localStream.getAudioTracks();
+          // Find and remove the specific audio track we just stopped
+          const trackToRemove = audioTracks.find(track => track.id === trackId);
+          if (trackToRemove) {
+            this.localStream.removeTrack(trackToRemove);
+          }
+        }
+        
+        this.localAudioTrack = undefined;
+      }
+      
+      // Emit the updated local stream (now without audio)
+      this.emit('local-stream-updated', this.localStream);
+      
+      console.log('🔊 Audio track stopped and producer closed');
+    } else {
+      // Turning on audio - create new audio track and producer
+      console.log('🔊 Turning on audio - creating new track and producer');
+      
+      try {
+        // Get new audio track
+        const audioStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
+        
+        const newAudioTrack = audioStream.getAudioTracks()[0];
+        this.localAudioTrack = newAudioTrack;
+        
+        // Add audio track to local stream
+        if (this.localStream) {
+          this.localStream.addTrack(newAudioTrack);
+        } else {
+          // If no local stream exists, create one with video + audio
+          const videoStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+              frameRate: { ideal: 30 }
+            }
+          });
+          this.localStream = new MediaStream([newAudioTrack, ...videoStream.getVideoTracks()]);
+        }
+        
+        // Emit the updated local stream
+        this.emit('local-stream-updated', this.localStream);
+        
+        // Create new audio producer
+        if (this.sendTransport && this.mediasoupDevice?.canProduce('audio')) {
+          const audioProducer = await this.sendTransport.produce({
+            track: newAudioTrack,
+            appData: { source: 'mic' },
+          });
+          
+          // Add producer event listeners
+          audioProducer.on('transportclose', () => {
+            console.log('🔊 Audio producer transport closed');
+          });
+          
+          audioProducer.on('@close', () => {
+            console.log('🔊 Audio producer closed');
+          });
+          
+          this.producers.set(audioProducer.id, audioProducer);
+          console.log('🔊 New audio producer created:', audioProducer.id);
+        }
+        
+        console.log('🔊 Audio track created and producer started');
+      } catch (error) {
+        console.error('🔊 Failed to turn on audio:', error);
+        throw error;
+      }
     }
   }
 

@@ -9,6 +9,10 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
+    sourcemap: true,
+    target: 'ES2022'
+  },
+  esbuild: {
+    target: 'ES2022'
   }
 })

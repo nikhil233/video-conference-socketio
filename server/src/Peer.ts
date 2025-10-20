@@ -268,6 +268,12 @@ export class Peer extends EnhancedEventEmitter<PeerEvents> {
         const { producerId } = data;
         const producer = this.#assertAndGetProducer(producerId);
 
+        console.log('🎥 Server: Closing producer:', {
+          peerId: this.#peerId,
+          socketId: this.#socket.id,
+          producerId: producer.id,
+          producerKind: producer.kind
+        });
         producer.close();
         this.#producers.delete(producerId);
         return {};
@@ -322,6 +328,12 @@ export class Peer extends EnhancedEventEmitter<PeerEvents> {
 
   #handleProducer(producer: mediasoup.types.Producer): void {
     producer.on('@close', () => {
+      console.log('🎥 Server: Producer closed event received:', {
+        peerId: this.#peerId,
+        socketId: this.#socket.id,
+        producerId: producer.id,
+        producerKind: producer.kind
+      });
       this.#producers.delete(producer.id);
       this.notify(NOTIFICATION_METHODS.PRODUCER_CLOSED, { producerId: producer.id });
       this.emit('producer-closed', { producer });
