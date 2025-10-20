@@ -218,6 +218,16 @@ export class Room extends EnhancedEventEmitter<RoomEvents> {
       }
     });
 
+    peer.on('producer-closed', ({ producer }) => {
+      this.#logger.debug('handlePeer() producer closed [peerId:%s, producerId:%s]', peer.id, producer.id);
+
+      // Notify all other peers about the producer closure
+      const otherPeers = this.#getOtherPeers(peer);
+      for (const otherPeer of otherPeers) {
+        otherPeer.notify('producerClosed', { producerId: producer.id });
+      }
+    });
+
     peer.on('disconnected', () => {
       this.#logger.debug('handlePeer() peer disconnected [peerId:%s]', peer.id);
 

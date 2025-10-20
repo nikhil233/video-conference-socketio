@@ -7,7 +7,7 @@ import { Me } from './Me';
 import { Stats } from './Stats';
 import { ControlPanel } from './ControlPanel';
 import { getRandomRoomId, getRandomPeerId, getRandomDisplayName } from '../utils';
-import { setRoomId, setPeerId, setDisplayName, setConnected, setProducing, addPeer, removePeer, setActiveSpeaker, setSpeakingPeers, setLocalStream, addConsumer, removeConsumer, resetRoom } from '../redux/slices/roomSlice';
+import { setRoomId, setPeerId, setDisplayName, setConnected, setProducing, addPeer, removePeer, setActiveSpeaker, setSpeakingPeers, setLocalStream, addConsumer, removeConsumer, updatePeerProducerAvailability, resetRoom } from '../redux/slices/roomSlice';
 
 export const Room: React.FC = () => {
   const dispatch = useDispatch();
@@ -56,6 +56,18 @@ export const Room: React.FC = () => {
 
       client.on('new-peer', (peer) => {
         dispatch(addPeer(peer));
+        
+        // Initialize producer availability for this peer (default to available)
+        dispatch(updatePeerProducerAvailability({
+          peerId: peer.id,
+          kind: 'video',
+          available: true
+        }));
+        dispatch(updatePeerProducerAvailability({
+          peerId: peer.id,
+          kind: 'audio',
+          available: true
+        }));
       });
 
       client.on('peer-closed', (peerId) => {
@@ -73,10 +85,29 @@ export const Room: React.FC = () => {
       client.on('new-consumer', (consumerData) => {
         // Handle new consumer
         dispatch(addConsumer(consumerData));
+        
+        // Update producer availability - this peer has this type of producer available
+        dispatch(updatePeerProducerAvailability({
+          peerId: consumerData.peerId,
+          kind: consumerData.kind,
+          available: true
+        }));
       });
 
       client.on('consumer-closed', (consumerId) => {
         dispatch(removeConsumer(consumerId));
+      });
+
+      client.on('producer-closed', (data) => {
+        // Handle producer closure - update producer availability state
+        console.log('Producer closed:', data);
+        
+        // Update the producer availability for this peer
+        dispatch(updatePeerProducerAvailability({
+          peerId: data.peerId,
+          kind: data.kind,
+          available: false
+        }));
       });
 
       client.on('production-started', () => {

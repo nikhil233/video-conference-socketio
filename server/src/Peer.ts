@@ -324,6 +324,7 @@ export class Peer extends EnhancedEventEmitter<PeerEvents> {
     producer.on('@close', () => {
       this.#producers.delete(producer.id);
       this.notify(NOTIFICATION_METHODS.PRODUCER_CLOSED, { producerId: producer.id });
+      this.emit('producer-closed', { producer });
     });
 
     producer.on('videoorientationchange', (videoOrientation: any) => {

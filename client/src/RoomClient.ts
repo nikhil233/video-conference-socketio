@@ -20,7 +20,7 @@ export interface RoomClientEvents {
   'speaking-peers': (peerVolumes: Array<{ peerId: string; volume: number }>) => void;
   'new-consumer': (consumerData: { consumerId: string; peerId: string; kind: string; track: MediaStreamTrack }) => void;
   'consumer-closed': (consumerId: string) => void;
-  'producer-closed': (producerId: string) => void;
+  'producer-closed': (data: { producerId: string; kind: string; peerId: string }) => void;
   'transport-closed': (transportId: string) => void;
   'production-started': () => void;
   'local-stream-updated': (stream: MediaStream | null) => void;
@@ -39,6 +39,7 @@ export class RoomClient {
   private recvTransportServerDtlsParams: any = null;
   private producers: Map<string, mediasoupClient.types.Producer> = new Map();
   private consumers: Map<string, mediasoupClient.types.Consumer> = new Map();
+  private consumersMetadata: Map<string, { peerId: string; kind: string; producerId: string }> = new Map();
   private peers: Map<string, PeerInfo> = new Map();
   private localStream?: MediaStream;
   private localVideoTrack?: MediaStreamTrack;
@@ -244,6 +245,11 @@ export class RoomClient {
         });
 
         this.consumers.set(consumer.id, consumer);
+        this.consumersMetadata.set(consumer.id, {
+          peerId: peerId,
+          kind: kind,
+          producerId: consumer.producerId
+        });
         console.log(`📊 Total consumers now: ${this.consumers.size}`);
         
         // Add consumer event listeners
@@ -351,17 +357,46 @@ export class RoomClient {
     if (consumer) {
       consumer.close();
       this.consumers.delete(consumerId);
+      this.consumersMetadata.delete(consumerId);
       this.emit('consumer-closed', consumerId);
     }
   }
 
   private handleProducerClosed(producerId: string): void {
-    const producer = this.producers.get(producerId);
-    if (producer) {
-      producer.close();
-      this.producers.delete(producerId);
-      this.emit('producer-closed', producerId);
+    console.log('🎥 Producer closed, closing corresponding consumers:', producerId);
+    
+    // Find consumers that were consuming from this producer
+    const consumersToClose: string[] = [];
+    let producerKind = 'unknown';
+    let producerPeerId = 'unknown';
+    
+    // Find consumers by checking metadata
+    for (const [consumerId, metadata] of this.consumersMetadata.entries()) {
+      if (metadata.producerId === producerId) {
+        consumersToClose.push(consumerId);
+        producerKind = metadata.kind;
+        producerPeerId = metadata.peerId;
+      }
     }
+    
+    // Close all consumers for this producer
+    consumersToClose.forEach(consumerId => {
+      const consumer = this.consumers.get(consumerId);
+      if (consumer) {
+        console.log('🎥 Closing consumer:', consumerId, 'for producer:', producerId);
+        consumer.close();
+        this.consumers.delete(consumerId);
+        this.consumersMetadata.delete(consumerId);
+        this.emit('consumer-closed', consumerId);
+      }
+    });
+    
+    // Emit producer-closed event with detailed info for UI updates
+    this.emit('producer-closed', { 
+      producerId, 
+      kind: producerKind, 
+      peerId: producerPeerId 
+    });
   }
 
   private handleTransportClosed(transportId: string): void {

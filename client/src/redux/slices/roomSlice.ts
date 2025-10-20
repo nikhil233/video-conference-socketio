@@ -13,6 +13,8 @@ export interface RoomState {
   speakingPeers: Array<{ peerId: string; volume: number }>;
   localStream: MediaStream | null;
   consumers: Record<string, { consumerId: string; peerId: string; kind: string; track: MediaStreamTrack }>;
+  // Producer availability tracking for each peer
+  peerProducerAvailability: Record<string, { hasVideo: boolean; hasAudio: boolean }>;
   // Video/Audio state
   isVideoEnabled: boolean;
   isAudioEnabled: boolean;
@@ -36,6 +38,7 @@ const initialState: RoomState = {
   speakingPeers: [],
   localStream: null,
   consumers: {},
+  peerProducerAvailability: {},
   // Video/Audio state
   isVideoEnabled: true,
   isAudioEnabled: true,
@@ -98,6 +101,25 @@ const roomSlice = createSlice({
       delete state.consumers[action.payload];
       state.stats.totalConsumers = Object.keys(state.consumers).length;
     },
+    setPeerProducerAvailability: (state, action: PayloadAction<{ peerId: string; hasVideo: boolean; hasAudio: boolean }>) => {
+      const { peerId, hasVideo, hasAudio } = action.payload;
+      if (!state.peerProducerAvailability[peerId]) {
+        state.peerProducerAvailability[peerId] = { hasVideo: true, hasAudio: true };
+      }
+      state.peerProducerAvailability[peerId].hasVideo = hasVideo;
+      state.peerProducerAvailability[peerId].hasAudio = hasAudio;
+    },
+    updatePeerProducerAvailability: (state, action: PayloadAction<{ peerId: string; kind: string; available: boolean }>) => {
+      const { peerId, kind, available } = action.payload;
+      if (!state.peerProducerAvailability[peerId]) {
+        state.peerProducerAvailability[peerId] = { hasVideo: true, hasAudio: true };
+      }
+      if (kind === 'video') {
+        state.peerProducerAvailability[peerId].hasVideo = available;
+      } else if (kind === 'audio') {
+        state.peerProducerAvailability[peerId].hasAudio = available;
+      }
+    },
     setVideoEnabled: (state, action: PayloadAction<boolean>) => {
       state.isVideoEnabled = action.payload;
     },
@@ -128,6 +150,8 @@ export const {
   updateStats,
   addConsumer,
   removeConsumer,
+  setPeerProducerAvailability,
+  updatePeerProducerAvailability,
   setVideoEnabled,
   setAudioEnabled,
   setScreenSharing,

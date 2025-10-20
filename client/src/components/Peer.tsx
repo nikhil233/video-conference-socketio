@@ -9,7 +9,7 @@ interface PeerProps {
 }
 
 export const Peer: React.FC<PeerProps> = ({ peer }) => {
-  const { activeSpeaker, speakingPeers, consumers } = useSelector((state: RootState) => state.room);
+  const { activeSpeaker, speakingPeers, consumers, peerProducerAvailability } = useSelector((state: RootState) => state.room);
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -112,6 +112,18 @@ export const Peer: React.FC<PeerProps> = ({ peer }) => {
   }, [consumers, peer.id]);
 
   const isActiveSpeaker = activeSpeaker === peer.id;
+  
+  // Check if video producer is available
+  const hasVideoProducer = peerProducerAvailability[peer.id]?.hasVideo !== false;
+  const hasAudioProducer = peerProducerAvailability[peer.id]?.hasAudio !== false;
+  
+  // Check if we have a video consumer (active video stream)
+  const hasVideoConsumer = Object.values(consumers).some(
+    consumer => consumer.peerId === peer.id && consumer.kind === 'video'
+  );
+  
+  // Show video if we have both producer and consumer
+  const shouldShowVideo = hasVideoProducer && hasVideoConsumer;
 
   return (
     <div className={cn(
@@ -120,12 +132,25 @@ export const Peer: React.FC<PeerProps> = ({ peer }) => {
       isSpeaking && "speaking"
     )}>
       <div className="relative w-full h-full bg-gray-700">
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          className="w-full h-full object-cover"
-        />
+        {shouldShowVideo ? (
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gray-600">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gray-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                <span className="text-2xl font-bold text-white">
+                  {peer.displayName ? peer.displayName.charAt(0).toUpperCase() : peer.id.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <p className="text-gray-300 text-sm">Camera off</p>
+            </div>
+          </div>
+        )}
         <audio 
           ref={audioRef} 
           autoPlay 
@@ -139,9 +164,18 @@ export const Peer: React.FC<PeerProps> = ({ peer }) => {
           peer.joined ? "connected" : "connecting"
         )} />
         
+        {/* Audio status indicator */}
+        <div className="absolute top-3 left-3 flex gap-2">
+          {!hasAudioProducer && (
+            <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-medium">
+              Mic Off
+            </div>
+          )}
+        </div>
+        
         {/* Peer name overlay */}
         <div className="huddle-peer-name">
-          {peer.displayName}
+          {peer.displayName} ({peer.id})
         </div>
         
         {/* Speaking indicator */}

@@ -65,7 +65,7 @@ export const Me: React.FC = () => {
         
         {/* Name overlay */}
         <div className="huddle-peer-name">
-          {displayName} (You)
+          {displayName} (You) 
         </div>
       </div>
     </div>
